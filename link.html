@@ -2,90 +2,55 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>فتح الرابط - UnlockTask</title>
+  <title>إنشاء رابط - UnlockTask</title>
   <style>
     body {
-      margin: 0; padding: 20px;
-      background-color: #0a0a0a;
+      background: #0a0a0a;
       color: #b0d9f7;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
+      padding: 20px;
       text-align: center;
     }
-    h1 {
-      color: #88c7ff;
-      text-shadow: 0 0 10px #88c7ff;
-      margin-bottom: 20px;
-    }
-    #videoContainer {
-      max-width: 640px;
-      margin: 0 auto 20px auto;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 0 15px #89caff33;
-    }
-    iframe {
-      width: 100%;
-      height: 360px;
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 6px;
       border: none;
+      font-size: 1rem;
     }
-    #openLinkBtn {
-      background-color: #89caff;
-      border: none;
-      padding: 15px 30px;
-      font-size: 1.2rem;
-      border-radius: 8px;
-      cursor: not-allowed;
+    input {
+      width: 300px;
+    }
+    button {
+      background: #89caff;
       color: #0a0a0a;
-      opacity: 0.5;
-      transition: background-color 0.3s ease;
-      margin-top: 20px;
-    }
-    #openLinkBtn.enabled {
       cursor: pointer;
-      opacity: 1;
     }
-    #timer {
-      margin-top: 10px;
-      font-weight: bold;
-      color: #a0d4ff;
+    #result {
+      margin-top: 20px;
+      font-size: 1.1rem;
+      color: #88c7ff;
+      word-break: break-all;
     }
   </style>
 </head>
 <body>
 
-  <h1>مشاهدة الإعلان لفتح الرابط</h1>
+<h2>إنشاء رابط جديد</h2>
 
-  <div id="videoContainer">
-    <!-- فيديو يوتيوب سيتم تحميله هنا -->
-    <div id="player"></div>
-  </div>
+<input type="url" id="originalUrl" placeholder="أدخل الرابط الأصلي هنا" />
+<br/>
+<button id="createBtn">إنشاء الرابط</button>
 
-  <div id="timer">الرجاء مشاهدة الإعلان: <span id="countdown">30</span> ثانية</div>
-  <button id="openLinkBtn" disabled>فتح الرابط</button>
+<div id="result"></div>
 
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <script>
-    // جلب معرف الرابط من URL
-    function getParameterByName(name) {
-      const url = window.location.href;
-      name = name.replace(/[\[\]]/g, '\\$&');
-      const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
-      const results = regex.exec(url);
-      if (!results) return null;
-      if (!results[2]) return '';
-      return decodeURIComponent(results[2].replace(/\+/g, ' '));
-    }
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    const linkId = getParameterByName('id');
-    if (!linkId) {
-      alert('لم يتم تحديد الرابط.');
-      window.location.href = 'dashboard.html';
-    }
-
-    // Firebase config
-    const firebaseConfig = {
+<script>
+  // إعداد Firebase
+  const firebaseConfig = {
   apiKey: "AIzaSyAX8PWbKfWeBYzmX7sdrBhIT0Wp1yPjR04",
   authDomain: "hemaern.firebaseapp.com",
   databaseURL: "https://hemaern-default-rtdb.europe-west1.firebasedatabase.app",
@@ -94,84 +59,45 @@
   messagingSenderId: "533729874483",
   appId: "1:533729874483:web:142462fdbd96156fe30946"
 };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  const createBtn = document.getElementById('createBtn');
+  const originalUrlInput = document.getElementById('originalUrl');
+  const resultDiv = document.getElementById('result');
 
-    let originalUrl = '';
-
-    // جلب بيانات الرابط من Firestore
-    async function fetchLinkData() {
-      try {
-        const doc = await db.collection('links').doc(linkId).get();
-        if (!doc.exists) {
-          alert('الرابط غير موجود.');
-          window.location.href = 'dashboard.html';
-          return;
-        }
-        const data = doc.data();
-        originalUrl = data.originalUrl || '#';
-        loadYouTubePlayer();
-      } catch (e) {
-        alert('خطأ في تحميل بيانات الرابط.');
-        window.location.href = 'dashboard.html';
-      }
+  createBtn.addEventListener('click', async () => {
+    const originalUrl = originalUrlInput.value.trim();
+    if (!originalUrl) {
+      alert('يرجى إدخال الرابط الأصلي');
+      return;
     }
 
-    // عداد تنازلي
-    let countdown = 30;
-    const countdownSpan = document.getElementById('countdown');
-    const openLinkBtn = document.getElementById('openLinkBtn');
+    // توليد معرف عشوائي (يمكن استبداله بطريقة أخرى)
+    const linkId = Math.random().toString(36).substring(2, 8);
 
-    function updateTimer() {
-      countdown--;
-      countdownSpan.textContent = countdown;
-      if (countdown <= 0) {
-        clearInterval(timerInterval);
-        openLinkBtn.disabled = false;
-        openLinkBtn.classList.add('enabled');
-        document.getElementById('timer').textContent = 'يمكنك الآن فتح الرابط';
-      }
-    }
-
-    let timerInterval;
-
-    // تحميل فيديو يوتيوب (مثلاً إعلان قصير)
-    let player;
-    function loadYouTubePlayer() {
-      player = new YT.Player('player', {
-        height: '360',
-        width: '640',
-        videoId: 'dQw4w9WgXcQ', // هنا ضع رابط الفيديو الذي تريد عرضه
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
+    try {
+      // إضافة الرابط لقاعدة البيانات
+      await db.collection('links').doc(linkId).set({
+        originalUrl,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        ownerUid: "user_uid_example" // استبدل بـ UID المستخدم الحقيقي بعد تسجيل الدخول
       });
+
+      // بناء رابط العرض النهائي
+      const finalLink = `${window.location.origin}/link.html?id=${linkId}`;
+
+      // عرض الرابط في الصفحة
+      resultDiv.innerHTML = `تم إنشاء الرابط: <a href="${finalLink}" target="_blank">${finalLink}</a>`;
+
+      // تنظيف الحقل
+      originalUrlInput.value = '';
+    } catch (error) {
+      console.error('خطأ في إنشاء الرابط:', error);
+      alert('حدث خطأ أثناء إنشاء الرابط، حاول مرة أخرى.');
     }
-
-    function onPlayerReady(event) {
-      event.target.playVideo();
-      timerInterval = setInterval(updateTimer, 1000);
-    }
-
-    // يمكنك تعقّب حالة الفيديو لو حبيت (مش ضروري هنا)
-    function onPlayerStateChange(event) {
-      // مثال: إيقاف الفيديو قبل انتهاء العداد لا يؤثر (يمكن إضافة تحكم)
-    }
-
-    openLinkBtn.addEventListener('click', () => {
-      if (!openLinkBtn.disabled) {
-        window.location.href = originalUrl;
-      }
-    });
-
-    fetchLinkData();
-  </script>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  });
+</script>
 
 </body>
 </html>
