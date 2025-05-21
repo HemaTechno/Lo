@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>إنشاء رابط مقفل - UnlockTask</title>
+  <style>
+    body {
+      margin: 0; padding: 20px;
+      background-color: #0a0a0a;
+      color: #b0d9f7;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #88c7ff;
+      text-shadow: 0 0 10px #88c7ff;
+      margin-bottom: 20px;
+    }
+    form {
+      background-color: #111111;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 500px;
+      box-shadow: 0 0 15px #89caff33;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      border: none;
+      font-size: 1rem;
+      background-color: #222;
+      color: #b0d9f7;
+    }
+    button {
+      background-color: #89caff;
+      border: none;
+      padding: 12px 25px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 15px #89caff88;
+      transition: background-color 0.3s ease;
+      color: #0a0a0a;
+    }
+    button:hover {
+      background-color: #6ab3ff;
+    }
+    #message {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    #backBtn {
+      margin-top: 10px;
+      background: none;
+      border: 1.5px solid #89caff;
+      color: #89caff;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #backBtn:hover {
+      background-color: #6ab3ff;
+      color: #0a0a0a;
+      border-color: #6ab3ff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>إنشاء رابط مقفل جديد</h1>
+
+  <form id="createLinkForm">
+    <label for="originalUrl">الرابط الأصلي *</label>
+    <input type="text" id="originalUrl" placeholder="https://example.com" required />
+
+    <label for="title">عنوان الرابط (اختياري)</label>
+    <input type="text" id="title" placeholder="مثلاً: رابط تحميل" />
+
+    <label for="task">اختر المهمة</label>
+    <select id="task">
+      <option value="view_ad">مشاهدة إعلان</option>
+      <option value="captcha">حل كابتشا</option>
+    </select>
+
+    <button type="submit">إنشاء الرابط</button>
+  </form>
+
+  <button id="backBtn">العودة للوحة التحكم</button>
+
+  <div id="message"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // TODO: استبدل بيانات Firebase الخاصة بك هنا
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const form = document.getElementById('createLinkForm');
+    const messageDiv = document.getElementById('message');
+    const backBtn = document.getElementById('backBtn');
+
+    // التأكد من تسجيل دخول المستخدم
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'login.html';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const originalUrl = document.getElementById('originalUrl').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const task = document.getElementById('task').value;
+
+      if (!originalUrl) {
+        messageDiv.textContent = 'يرجى إدخال الرابط الأصلي.';
+        messageDiv.style.color = 'red';
+        return;
+      }
+
+      const user = auth.currentUser;
+      if (!user) {
+        messageDiv.textContent = 'لم يتم تسجيل الدخول.';
+        messageDiv.style.color = 'red';
+        return;
+      }
+
+      messageDiv.textContent = 'جاري إنشاء الرابط...';
+      messageDiv.style.color = '#89caff';
+
+      try {
+        const newDoc = await db.collection('links').add({
+          ownerUid: user.uid,
+          originalUrl,
+          title,
+          task,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        messageDiv.textContent = 'تم إنشاء الرابط بنجاح! يمكنك العودة للوحة التحكم.';
+        messageDiv.style.color = '#4caf50';
+        form.reset();
+      } catch (error) {
+        messageDiv.textContent = 'حدث خطأ أثناء إنشاء الرابط: ' + error.message;
+        messageDiv.style.color = 'red';
+      }
+    });
+
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'dashboard.html';
+    });
+  </script>
+</body>
+</html>
