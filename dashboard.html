@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة التحكم - UnlockTask</title>
+  <style>
+    body {
+      margin: 0; padding: 20px;
+      background-color: #0a0a0a;
+      color: #b0d9f7;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #88c7ff;
+      text-shadow: 0 0 10px #88c7ff;
+      margin-bottom: 20px;
+    }
+    button#createLinkBtn {
+      background-color: #89caff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 15px #89caff88;
+      transition: background-color 0.3s ease;
+      margin-bottom: 30px;
+    }
+    button#createLinkBtn:hover {
+      background-color: #6ab3ff;
+    }
+    #linksList {
+      list-style: none;
+      padding: 0;
+    }
+    #linksList li {
+      background-color: #111111;
+      margin-bottom: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px #89caff33;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #linksList li span {
+      word-break: break-all;
+      max-width: 70%;
+    }
+    #logoutBtn {
+      background: none;
+      border: 1.5px solid #89caff;
+      color: #89caff;
+      padding: 8px 15px;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      transition: background-color 0.3s ease;
+    }
+    #logoutBtn:hover {
+      background-color: #6ab3ff;
+      color: #0a0a0a;
+      border-color: #6ab3ff;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="logoutBtn">تسجيل الخروج</button>
+  <h1>لوحة تحكم UnlockTask</h1>
+  <button id="createLinkBtn">إنشاء رابط مقفل جديد</button>
+
+  <ul id="linksList">
+    <li>جاري تحميل روابطك...</li>
+  </ul>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // TODO: استبدل بيانات Firebase الخاصة بك هنا
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const createLinkBtn = document.getElementById('createLinkBtn');
+    const linksList = document.getElementById('linksList');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // تحقق تسجيل دخول المستخدم
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        // إذا لم يكن مسجل الدخول، نعيد توجيه للصفحة الرئيسية (تسجيل الدخول)
+        window.location.href = 'login.html';
+        return;
+      }
+      loadUserLinks(user.uid);
+    });
+
+    // تحميل روابط المستخدم من Firestore
+    function loadUserLinks(uid) {
+      db.collection('links')
+        .where('ownerUid', '==', uid)
+        .orderBy('createdAt', 'desc')
+        .get()
+        .then(snapshot => {
+          linksList.innerHTML = '';
+          if (snapshot.empty) {
+            linksList.innerHTML = '<li>لم تقم بإنشاء أي روابط بعد.</li>';
+            return;
+          }
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const li = document.createElement('li');
+
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = data.title || data.originalUrl;
+
+            const openLink = document.createElement('a');
+            openLink.href = `link.html?id=${doc.id}`;
+            openLink.textContent = 'فتح الرابط';
+            openLink.style.color = '#89caff';
+            openLink.style.textDecoration = 'none';
+            openLink.target = '_blank';
+
+            li.appendChild(titleSpan);
+            li.appendChild(openLink);
+            linksList.appendChild(li);
+          });
+        })
+        .catch(err => {
+          linksList.innerHTML = `<li>حدث خطأ أثناء تحميل الروابط: ${err.message}</li>`;
+        });
+    }
+
+    // زر إنشاء رابط جديد - يوجه لصفحة إنشاء الرابط
+    createLinkBtn.addEventListener('click', () => {
+      window.location.href = 'create_link.html';
+    });
+
+    // تسجيل خروج
+    logoutBtn.addEventListener('click', () => {
+      auth.signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    });
+  </script>
+</body>
+</html>
